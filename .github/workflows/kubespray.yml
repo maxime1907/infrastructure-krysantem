@@ -1,0 +1,80 @@
+name: "Kubespray action"
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+
+env:
+  PUBLIC_IP_OVH_KRYSANTEM_GRA1_PROD_NODE_001: ${{ secrets.PUBLIC_IP_OVH_KRYSANTEM_GRA1_PROD_NODE_001 }}
+  KUBESPRAY_SSH_PRIVATE_KEY: ${{ secrets.KUBESPRAY_SSH_PRIVATE_KEY }}
+  KUBESPRAY_SSH_PUBLIC_KEY: ${{ secrets.KUBESPRAY_SSH_PUBLIC_KEY }}
+
+jobs:
+  deploy:
+    name: Deploy kubernetes cluster ${{ matrix.cluster-name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ['ubuntu-latest']
+        python-version: ['3.10']
+        # Master branch 26/03/2023
+        kubespray-ref: ['8afd74ce1fcbf56f6d2c43b5ab6b87e4c0e5d9d2']
+        cluster-name: ['ovh-krysantem-gra1-prod']
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v3
+
+      - name: Git checkout Kubespray ${{ matrix.kubespray-ref }}
+        uses: actions/checkout@v3
+        with:
+          repository: 'kubernetes-sigs/kubespray'
+
+          # The branch, tag or SHA to checkout. When checking out the repository that
+          # triggered a workflow, this defaults to the reference or SHA for that event.
+          # Otherwise, uses the default branch.
+          ref: ${{ matrix.kubespray-ref }}
+
+          # Relative path under $GITHUB_WORKSPACE to place the repository
+          path: 'kubespray'
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: "Install kubespray dependencies"
+        run: |
+          pip install -r kubespray/requirements.txt
+
+      - name: "Setup inventory"
+        run: |
+          declare -a IPS=($PUBLIC_IP_OVH_KRYSANTEM_GRA1_PROD_NODE_001)
+          CONFIG_FILE=inventory/${{ matrix.cluster-name }}/hosts.yml python kubespray/contrib/inventory_builder/inventory.py ${IPS[@]}
+
+          rm -rf kubespray/inventory/*
+          cp -R inventory/* kubespray/inventory
+
+      - name: Run kubespray playbook
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: dawidd6/action-ansible-playbook@v2
+        with:
+          # Required, playbook filepath
+          playbook: cluster.yml
+          # Optional, directory where playbooks live
+          directory: ./kubespray
+          # Optional, SSH private key
+          key: ${{secrets.KUBESPRAY_SSH_PRIVATE_KEY}}
+          # Optional, additional flags to pass to ansible-playbook
+          options: |
+            --become --become-user=root
+            --inventory inventory/${{ matrix.cluster-name }}/hosts.yml
+            --extra-vars cluster_name=${{ matrix.cluster-name }}
+            --verbose
