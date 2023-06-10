@@ -24,8 +24,7 @@ jobs:
       matrix:
         os: ['ubuntu-latest']
         python-version: ['3.10']
-        # Master branch 26/03/2023
-        kubespray-ref: ['8afd74ce1fcbf56f6d2c43b5ab6b87e4c0e5d9d2']
+        kubespray-ref: ['v2.22.1']
         cluster-name: ['ovh-krysantem-gra1-prod']
     steps:
       - name: Git checkout
