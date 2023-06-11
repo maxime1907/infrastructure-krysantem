@@ -1,0 +1,64 @@
+name: Setup kubespray
+
+description: 'Sets up the kubespray environment for jobs during CI workflow'
+
+inputs:
+  python-version:
+    description: 'The python version to be setup'
+    required: false
+    default: '3.10'
+  kubespray-ref:
+    description: 'The kubespray ref to install'
+    required: false
+    default: 'v2.22.1'
+  yq-version:
+    description: 'The yq version to install'
+    required: false
+    default: 'v4.34.1'
+  cluster-name:
+    description: 'The cluster name used to setup kubespray'
+    required: true
+  PUBLIC_IP_OVH_KRYSANTEM_GRA1_PROD_NODE_001:
+    description: 'The public ip of the node 001'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Git checkout Kubespray ${{ inputs.kubespray-ref }}
+      uses: actions/checkout@v3
+      with:
+        repository: 'kubernetes-sigs/kubespray'
+
+        # The branch, tag or SHA to checkout. When checking out the repository that
+        # triggered a workflow, this defaults to the reference or SHA for that event.
+        # Otherwise, uses the default branch.
+        ref: ${{ inputs.kubespray-ref }}
+
+        # Relative path under $GITHUB_WORKSPACE to place the repository
+        path: 'kubespray'
+
+    - name: Set up Python ${{ inputs.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ inputs.python-version }}
+        cache: 'pip'
+
+    - name: "Install kubespray dependencies"
+      shell: bash
+      run: |
+        pip install -r kubespray/requirements.txt
+
+    - name: Set up yq ${{ inputs.yq-version }}
+      uses: mikefarah/yq@v4.34.1
+
+    - name: "Set up public ips"
+      shell: bash
+      run: |
+        yq e -i '.all.hosts.node-001.ansible_host = "${{ inputs.PUBLIC_IP_OVH_KRYSANTEM_GRA1_PROD_NODE_001 }}"' inventory/${{ inputs.cluster-name }}/hosts.yml
+
+    - name: "Set up inventory"
+      shell: bash
+      run: |
+        rm -rf kubespray/inventory/*
+        cp -R inventory/* kubespray/inventory

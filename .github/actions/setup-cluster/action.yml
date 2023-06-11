@@ -1,0 +1,20 @@
+name: Setup cluster
+
+description: 'Sets up the cluster environment for jobs during CI workflow'
+
+outputs:
+  cluster-name:
+    description: 'The list of clusters'
+    value: ${{ steps.get-clusters.outputs.CLUSTER_NAME }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up yq ${{ inputs.yq-version }}
+      uses: mikefarah/yq@v4.34.1
+
+    - name: Get cluster names
+      id: get-clusters
+      shell: bash
+      run: |
+        echo "CLUSTER_NAME=$(yq '.clusters' -o json -I=0 clusters.yml)" >> $GITHUB_OUTPUT

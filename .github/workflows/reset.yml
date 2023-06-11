@@ -1,0 +1,56 @@
+name: "Reset action"
+
+on:
+  - workflow_dispatch
+
+jobs:
+  configuration:
+    name: "Setup github matrix"
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - 'ubuntu-latest'
+    outputs:
+      cluster-name: ${{ steps.set-matrix.outputs.cluster-name }}
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v3
+      - id: set-matrix
+        uses: './.github/actions/setup-cluster'
+
+  reset:
+    name: Reset ${{ matrix.cluster-name }}
+    needs: configuration
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - 'ubuntu-latest'
+        cluster-name: ${{ fromJson(needs.configuration.outputs.cluster-name) }}
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v3
+
+      - name: Set up kubespray
+        uses: './.github/actions/setup-kubespray'
+        with:
+          cluster-name: ${{ matrix.cluster-name }}
+          PUBLIC_IP_OVH_KRYSANTEM_GRA1_PROD_NODE_001: ${{ secrets.PUBLIC_IP_OVH_KRYSANTEM_GRA1_PROD_NODE_001 }}
+
+      - name: Reset cluster
+        uses: dawidd6/action-ansible-playbook@v2
+        with:
+          # Required, playbook filepath
+          playbook: reset.yml
+          # Optional, directory where playbooks live
+          directory: ./kubespray
+          # Optional, SSH private key
+          key: ${{secrets.KUBESPRAY_SSH_PRIVATE_KEY}}
+          # Optional, additional flags to pass to ansible-playbook
+          options: |
+            --become --become-user=root
+            --inventory inventory/${{ matrix.cluster-name }}/hosts.yml
+            --verbose

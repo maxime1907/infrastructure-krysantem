@@ -1,2 +1,4 @@
 id_*
 .ssh*
+.venv
+kubespray
