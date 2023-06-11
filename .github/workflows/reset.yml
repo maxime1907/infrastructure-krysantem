@@ -53,4 +53,5 @@ jobs:
           options: |
             --become --become-user=root
             --inventory inventory/${{ matrix.cluster-name }}/hosts.yml
+            --extra-var "reset_confirmation=yes"
             --verbose
