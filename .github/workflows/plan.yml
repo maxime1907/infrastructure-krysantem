@@ -1,0 +1,48 @@
+name: "Plan action"
+
+on:
+  pull_request:
+    branches:
+      - main
+      - master
+
+jobs:
+  configuration:
+    name: "Setup github matrix"
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - 'ubuntu-latest'
+    outputs:
+      cluster-name: ${{ steps.set-matrix.outputs.cluster-name }}
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v3
+      - id: set-matrix
+        uses: './.github/actions/setup-cluster'
+
+  plan:
+    name: Plan ${{ matrix.cluster-name }}
+    needs: configuration
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - 'ubuntu-latest'
+        cluster-name: ${{ fromJson(needs.configuration.outputs.cluster-name) }}
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v3
+
+      - name: Set up kubespray
+        uses: './.github/actions/setup-kubespray'
+        with:
+          cluster-name: ${{ matrix.cluster-name }}
+          PUBLIC_IP_OVH_KRYSANTEM_GRA1_PROD_NODE_001: ${{ secrets.PUBLIC_IP_OVH_KRYSANTEM_GRA1_PROD_NODE_001 }}
+
+      - name: Cluster configuration
+        run: |
+          ansible-inventory -i inventory/${{ matrix.cluster-name }} --list
