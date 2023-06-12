@@ -56,7 +56,6 @@ runs:
       shell: bash
       run: |
         yq e -i '.all.children.bare_metals.hosts.node-metal-001.ansible_host = "${{ inputs.PUBLIC_IP_OVH_KRYSANTEM_GRA1_PROD_NODE_001 }}"' inventory/${{ inputs.cluster-name }}/hosts.yml
-        yq e -i '.all.children.bare_metals.hosts.node-metal-001.ip = "${{ inputs.PUBLIC_IP_OVH_KRYSANTEM_GRA1_PROD_NODE_001 }}"' inventory/${{ inputs.cluster-name }}/hosts.yml
 
     - name: "Set up inventory"
       shell: bash
