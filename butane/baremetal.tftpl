@@ -5,3 +5,23 @@ passwd:
     - name: core
       ssh_authorized_keys:
         - ${ssh_authorized_key}
+storage:
+  files:
+    - path: /etc/systemd/network/priv0.netdev
+      contents:
+        inline: |
+          [NetDev]
+          Name=priv0
+          Kind=dummy
+
+    - path: /etc/systemd/network/priv0.network
+      contents:
+        inline: |
+          [Match]
+          Name=priv0
+
+          [Network]
+          DHCP=no
+          DNS=1.1.1.1
+          DNS=1.0.0.1
+          Address=10.0.0.2/16

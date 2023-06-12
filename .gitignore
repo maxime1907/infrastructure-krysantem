@@ -1,4 +1,5 @@
 id_*
 .ssh*
-.venv
+.venv*
 kubespray
+*.tmp
